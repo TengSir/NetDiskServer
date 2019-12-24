@@ -1,6 +1,7 @@
 package edu.hbuas.netdiskserver.control;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -10,6 +11,7 @@ import java.net.Socket;
 import java.util.HashSet;
 import java.util.Set;
 
+import edu.hbuas.netdisk.config.NetDiskConfig;
 import edu.hbuas.netdisk.model.Message;
 /**
  * 封装一个网盘服务器的服务类
@@ -28,7 +30,7 @@ public class Server {
 	}
 	public Server() {
 		try {
-			while(true) {
+			while(true) { 
 			Socket  client=server.accept();
 			ObjectInputStream in=new ObjectInputStream(client.getInputStream());
 			ObjectOutputStream  out=new ObjectOutputStream(client.getOutputStream());
@@ -70,7 +72,7 @@ public class Server {
 					case UPLOAD:
 					{
 						String fileName=message.getFilename();
-						File userDir=new File("D:/netDiskServer/"+message.getFromUser());
+						File userDir=new File(NetDiskConfig.serverStoreFileBasePath+message.getFromUser());
 						if(!userDir.exists())userDir.mkdirs();
 						FileOutputStream  out=new FileOutputStream(userDir.getAbsolutePath()+"/"+fileName);
 						byte[] bs=new byte[1024];
@@ -87,14 +89,25 @@ public class Server {
 					}
 					case DOWNLOAD:
 					{
-	
+						System.out.println(message.getFromUser()+"准备下载:"+message.getFilename());
+							String fileName=message.getFilename();//获得用户要想下载的文件名
+							File file=new File(NetDiskConfig.serverStoreFileBasePath+message.getFromUser()+"/"+fileName);
+							FileInputStream  fileIn=new FileInputStream(file);
+							byte[] bs=new byte[1024];
+							int length=-1;
+							while((length=fileIn.read(bs))!=-1) {
+								out.write(bs,0,length);
+								out.flush();
+							}
+							System.out.println(message.getFromUser()+"的文件:"+message.getFilename()+"下载完毕");
+							
 						break;
 					}
 					case LOADFILES:
 					{
 						System.out.println(message);
 						String username=message.getFromUser();//用户名
-						File userDir=new File("D:/netDiskServer/"+username);//构造一个文件对象用来指向用户的网盘文件夹
+						File userDir=new File(NetDiskConfig.serverStoreFileBasePath+username);//构造一个文件对象用来指向用户的网盘文件夹
 						if(!userDir.exists()) {//判断服务器上是否有这个用户的磁盘文件夹，如果没有，说明这是一个新的用户，或者该用户删除了所有文件，则给他创建一个新的文件夹
 							userDir.mkdirs();
 						}
